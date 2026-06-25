@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WuWa Endstate Matrix & Planner</title>
+    <style>
+        /* CSS Styling - Dark Mode Aesthetic */
+        :root {
+            --bg-main: #121212;
+            --bg-panel: #1e1e1e;
+            --text-main: #e0e0e0;
+            --accent: #4ade80;
+            /* Aero Green */
+            --border: #333;
+            --hp-fill: #3b82f6;
+            /* Boss HP Blue */
+            --hp-est: #ea580c;
+            /* Estimated Orange */
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            height: 100vh;
+            box-sizing: border-box;
+            gap: 20px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        /* Layout Grid */
+        #sidebar {
+            width: 350px;
+            background: var(--bg-panel);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        #main-view {
+            flex-grow: 1;
+            background: var(--bg-panel);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Team Cards */
+        .team-card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            cursor: grab;
+        }
+
+        .team-card:active {
+            cursor: grabbing;
+        }
+
+        .team-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+            border-style: dashed;
+        }
+
+        .team-card.drag-over-top {
+            border-top: 3px solid var(--accent) !important;
+        }
+
+        .team-card.drag-over-bottom {
+            border-bottom: 3px solid var(--accent) !important;
+        }
+
+        .team-card input[type="number"] {
+            width: 80px;
+            background: #111;
+            color: white;
+            border: 1px solid #444;
+            padding: 5px;
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        .team-name-input {
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 1px dashed #555 !important;
+            color: white !important;
+            font-size: 1.1em;
+            font-weight: bold;
+            padding: 2px 0 !important;
+            width: 70%;
+            transition: border-bottom-color 0.2s;
+        }
+
+        .team-name-input:focus {
+            outline: none;
+            border-bottom: 1px solid var(--accent) !important;
+        }
+
+        .input-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: auto;
+            margin-top: 0;
+            font-size: 0.8em;
+            transition: background 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 5px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        /* Boss Matrix Dashboard */
+        .boss-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+
+        .boss-info {
+            width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .boss-name {
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+
+        .boss-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .badge {
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .badge-aero {
+            background-color: #22ff68;
+            color: #000000;
+        }
+
+        .badge-glacio {
+            background-color: #06b6d4;
+            color: #000000;
+        }
+
+        .badge-fusion {
+            background-color: #ea4f0c;
+            color: #000000;
+        }
+
+        .badge-electro {
+            background-color: #9f4eeb;
+            color: #000000;
+        }
+
+        .badge-spectro {
+            background-color: #d9d506;
+            color: #000000;
+        }
+
+        .badge-havoc {
+            background-color: #be185d;
+            color: #000000;
+        }
+
+        .badge-all {
+            background-color: #64748b;
+            color: #ffffff;
+        }
+
+        .boss-bar-container {
+            flex-grow: 1;
+            height: 24px;
+            background: #111;
+            border-radius: 12px;
+            border: 1px solid #444;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .boss-bar-fill {
+            height: 100%;
+            background: var(--hp-fill);
+            width: 0%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: width 0.3s ease;
+        }
+
+        .boss-bar-est {
+            height: 100%;
+            background: repeating-linear-gradient(45deg,
+                    var(--hp-est),
+                    var(--hp-est) 10px,
+                    #9a3412 10px,
+                    #9a3412 20px);
+            width: 0%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0.6;
+            transition: width 0.3s ease;
+        }
+
+        .boss-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.85em;
+            text-shadow: 1px 1px 2px black;
+            z-index: 2;
+        }
+
+        .round-header {
+            margin-top: 30px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+            color: var(--accent);
+        }
+
+        /* Planner View */
+        .hidden {
+            display: none !important;
+        }
+
+        #canvas-area {
+            height: 300px;
+            border: 2px dashed #555;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+            padding: 10px;
+        }
+
+        #delete-zone {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 150px;
+            height: 60px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px dashed #ef4444;
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: background 0.2s, transform 0.2s, color 0.2s;
+            pointer-events: none;
+            z-index: 1;
+            user-select: none;
+        }
+
+        #delete-zone.drag-hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fff;
+            border-color: #f87171;
+            transform: scale(1.05);
+        }
+
+        .node-note-bubble {
+            background: #222;
+            border: 1px dashed #666;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            color: #ccc;
+            white-space: normal;
+            word-break: break-word;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .node-note-bubble:hover {
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        #timeline-track {
+            min-height: 100px;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 15px;
+            gap: 15px;
+        }
+
+        .node {
+            position: relative;
+            padding: 14px 12px 8px 12px;
+            background: #333;
+            border: 1px solid #666;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 15px;
+            transition: border-color 0.2s;
+        }
+
+        .node:hover {
+            border-color: var(--accent);
+        }
+
+        .node-icon {
+            position: absolute;
+            top: -14px;
+            background: #222;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .dropdown-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .dropdown-input {
+            width: 100%;
+            background: #111;
+            color: white;
+            border: 1px solid #444;
+            padding: 8px 65px 8px 30px;
+            border-radius: 4px;
+            font-size: 0.95em;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .dropdown-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dropdown-item:hover {
+            background: #2a2a2a;
+        }
+
+        .dropdown-item.selected {
+            background: #333;
+            color: var(--accent);
+        }
+
+        .dropdown-item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .team-cost {
+            font-size: 0.85em;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .char-moveset-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            padding: 10px;
+            background: #222;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .char-moveset-title {
+            font-weight: bold;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Watermark Styles */
+        .watermark {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.35;
+            pointer-events: none;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .watermark img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #222;
+        }
+
+        .watermark span {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: var(--text-main);
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        /* Color input styling */
+        input[type="color"] {
+            appearance: none;
+            border: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            background: none;
+            vertical-align: middle;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid #444;
+            border-radius: 50%;
+        }
+
+        input[type="color"]::-moz-color-swatch {
+            border: 1px solid #444;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2 style="margin: 0; font-size: 1.4em;">Teams & Scores</h2>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="sharePlan()"
+                    style="width: auto; margin-top: 0; padding: 6px 12px; background: #3b82f6; color: white;">Share</button>
+                <button onclick="addNewTeam()" style="width: auto; margin-top: 0; padding: 6px 12px;">+ Add</button>
+            </div>
+        </div>
+        <div id="teams-container" style="display: flex; flex-direction: column; gap: 15px;"></div>
+    </div>
+
+    <div id="main-view">
+        <div class="watermark">
+            <img src="./GabrielHobbies.png" alt="PFP"
+                onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%234ade80\' width=\'32px\' height=\'32px\'><circle cx=\'12\' cy=\'8\' r=\'4\'/><path d=\'M12 14c-6.1 0-8 4-8 4h16s-1.9-4-8-4z\'/></svg>'">
+            <span>Created By Gabriel Hobbies</span>
+            <span style="font-size: 0.85em; font-weight: normal;">Version 0.1 (beta)</span>
+        </div>
+
+        <div id="matrix-dashboard">
+            <h2>Endstate Matrix Waterfall</h2>
+            <p>Total Actual: <span id="tot-act" style="color:var(--hp-fill); font-weight:bold;">0</span> | Total
+                Projected: <span id="tot-est" style="color:#fbbf24; font-weight:bold;">0</span></p>
+            <div id="boss-container"></div>
+        </div>
+
+        <div id="rotation-planner" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="planner-title" style="margin: 0;">Editing Rotation</h2>
+                <button onclick="closePlanner()"
+                    style="width: auto; margin-top: 0; background: #555; color: white; padding: 6px 12px;">← Back to
+                    Matrix</button>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Timelines</h3>
+                <button onclick="addTimeline()"
+                    style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 0.9em; background: #555; color: white; border-radius: 4px;">+
+                    Add Timeline</button>
+            </div>
+            <div id="timelines-container"
+                style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;"></div>
+
+            <p style="color: #aaa; font-size: 0.9em; margin-top: 20px;">Click on character moves below to spawn a node,
+                then double-click a node to move it to/from the timeline.</p>
+            <div id="movesets-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            </div>
+
+            <h3 style="margin-top: 20px;">Free-form Canvas</h3>
+            <div id="canvas-area"></div>
+        </div>
+
+        <div class="disclaimer-box"
+            style="margin-top: 40px; padding: 15px; border: 1px solid #333; border-radius: 6px; background-color: #1a1a1a; font-size: 0.85em; color: #888; line-height: 1.4; text-align: center;">
+            Disclaimer: This is a fan-made, non-commercial community tool. "Wuthering Waves" and all related game
+            assets, character names, and icons are the property and copyright of Kuro Games. This project is not
+            affiliated with, endorsed, sponsored, or specifically approved by Kuro Games.
+        </div>
+    </div>
+
+    <script>
+        // --- HTML Escaping to Prevent XSS in shared links ---
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, match => {
+                const escape = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
+                return escape[match];
+            });
+        }
+
+        // =========================================================================
+        // --- 1. CHARACTER DATABASE CONFIGURATION ---
+        // Manually add, edit, or remove characters, attributes, costs, and icons here.
+        // Elements: Glacio, Fusion, Electro, Aero, Spectro, Havoc
+        // =========================================================================
+        const CHARACTERS = [
+            { id: "aalto", name: "Aalto", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Aalto.webp" },
+            { id: "aemeath", name: "Aemeath", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Aemeath.webp" },
+            { id: "augusta", name: "Augusta", attribute: "Electro", cost: 1, icon: "./Resonator PFP/Resonator_Augusta.webp" },
+            { id: "baizhi", name: "Baizhi", attribute: "Glacio", cost: 2, icon: "./Resonator PFP/Resonator_Baizhi.webp" },
+            { id: "brant", name: "Brant", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Brant.webp" },
+            { id: "buling", name: "Buling", attribute: "Electro", cost: 2, icon: "./Resonator PFP/Resonator_Buling.webp" },
+            { id: "calcharo", name: "Calcharo", attribute: "Electro", cost: 1, icon: "./Resonator PFP/Resonator_Calcharo.webp" },
+            { id: "camellya", name: "Camellya", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Camellya.webp" },
+            { id: "cantarella", name: "Cantarella", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Cantarella.webp" },
+            { id: "carlotta", name: "Carlotta", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Carlotta.webp" },
+            { id: "cartethyia", name: "Cartethyia", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Cartethyia.webp" },
+            { id: "changli", name: "Changli", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Changli.webp" },
+            { id: "chisa", name: "Chisa", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Chisa.webp" },
+            { id: "chixia", name: "Chixia", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Chixia.webp" },
+            { id: "ciaccona", name: "Ciaccona", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Ciaccona.webp" },
+            { id: "danjin", name: "Danjin", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Danjin.webp" },
+            { id: "denia", name: "Denia", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Denia.webp" },
+            { id: "encore", name: "Encore", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Encore.webp" },
+            { id: "galbrena", name: "Galbrena", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Galbrena.webp" },
+            { id: "hiyuki", name: "Hiyuki", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Hiyuki.webp" },
+            { id: "iuno", name: "Iuno", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Iuno.webp" },
+            { id: "jianxin", name: "Jianxin", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Jianxin.webp" },
+            { id: "jinhsi", name: "Jinhsi", attribute: "Spectro", cost: 1, icon: "./Resonator PFP/Resonator_Jinhsi.webp" },
+            { id: "jiyan", name: "Jiyan", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Jiyan.webp" },
+            { id: "lingyang", name: "Lingyang", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Lingyang.webp" },
+            { id: "lucilla", name: "Lucilla", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Lucilla.webp" },
+            { id: "lucy", name: "Lucy", attribute: "Spectro", cost: 1, icon: "./Resonator PFP/Resonator_Lucy.webp" },
+            { id: "lumi", name: "Lumi", attribute: "Electro", cost: 1, icon: "./Resonator PFP/Resonator_Lumi.webp" },
+            { id: "lupa", name: "Lupa", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Lupa.webp" },
+            { id: "luuk_herssen", name: "Luuk Herssen", attribute: "Spectro", cost: 1, icon: "./Resonator PFP/Resonator_Luuk_Herssen.webp" },
+            { id: "lynae", name: "Lynae", attribute: "Spectro", cost: 1, icon: "./Resonator PFP/Resonator_Lynae.webp" },
+            { id: "mornye", name: "Mornye", attribute: "Fusion", cost: 2, icon: "./Resonator PFP/Resonator_Mornye.webp" },
+            { id: "mortefi", name: "Mortefi", attribute: "Fusion", cost: 1, icon: "./Resonator PFP/Resonator_Mortefi.webp" },
+            { id: "phoebe", name: "Phoebe", attribute: "Spectro", cost: 1, icon: "./Resonator PFP/Resonator_Phoebe.webp" },
+            { id: "phrolova", name: "Phrolova", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Phrolova.webp" },
+            { id: "qiuyuan", name: "Qiuyuan", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Qiuyuan.webp" },
+            { id: "rebecca", name: "Rebecca", attribute: "Electro", cost: 1, icon: "./Resonator PFP/Resonator_Rebecca.webp" },
+            { id: "roccia", name: "Roccia", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Roccia.webp" },
+            { id: "rover", name: "Rover", attribute: "Rover", cost: 1, icon: "./Resonator PFP/Resonator_Rover.webp" },
+            { id: "sanhua", name: "Sanhua", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Sanhua.webp" },
+            { id: "shorekeeper", name: "Shorekeeper", attribute: "Spectro", cost: 2, icon: "./Resonator PFP/Resonator_Shorekeeper.webp" },
+            { id: "sigrika", name: "Sigrika", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Sigrika.webp" },
+            { id: "taoqi", name: "Taoqi", attribute: "Havoc", cost: 1, icon: "./Resonator PFP/Resonator_Taoqi.webp" },
+            { id: "verina", name: "Verina", attribute: "Spectro", cost: 2, icon: "./Resonator PFP/Resonator_Verina.webp" },
+            { id: "xiangli_yao", name: "Xiangli Yao", attribute: "Electro", cost: 1, icon: "./Resonator PFP/Resonator_Xiangli_Yao.webp" },
+            { id: "yangyang", name: "Yangyang", attribute: "Aero", cost: 1, icon: "./Resonator PFP/Resonator_Yangyang.webp" },
+            { id: "yinlin", name: "Yinlin", attribute: "Electro", cost: 2, icon: "./Resonator PFP/Resonator_Yinlin.webp" },
+            { id: "youhu", name: "Youhu", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Youhu.webp" },
+            { id: "yuanwu", name: "Yuanwu", attribute: "Electro", cost: 1, icon: "./Resonator PFP/Resonator_Yuanwu.webp" },
+            { id: "zani", name: "Zani", attribute: "Spectro", cost: 1, icon: "./Resonator PFP/Resonator_Zani.webp" },
+            { id: "zhezhi", name: "Zhezhi", attribute: "Glacio", cost: 1, icon: "./Resonator PFP/Resonator_Zhezhi.webp" }
+        ];
+
+        // --- BOSSES & RESISTANCES ---
+        const BOSS_TEMPLATES = [
+            { name: "Matrix Swarm", resistances: ["Havoc"] },
+            { name: "Fleurdelys", resistances: ["Aero"] },
+            { name: "Sigilum", resistances: ["Spectro"] },
+            { name: "Reactor Husk", resistances: ["Fusion"] },
+            { name: "Mimic", resistances: ["All"] }
+        ];
+
+        const ROUND_HP_TIERS = {
+            1: 4000,
+            2: 7000,
+            3: 14000
+        };
+
+        const bosses = [];
+        for (let r = 1; r <= 3; r++) {
+            BOSS_TEMPLATES.forEach(template => {
+                let hp = ROUND_HP_TIERS[r];
+                if (template.name === "Mimic") {
+                    hp = Math.round(hp * 1.17);
+                }
+                bosses.push({
+                    round: r,
+                    name: template.name,
+                    hp: hp,
+                    resistances: template.resistances
+                });
+            });
+        }
+
+        // --- 2. TEAM COLORS & PALETTE ---
+        const TEAM_PALETTE = [
+            "#4ade80", // Aero Green
+            "#3b82f6", // Blue
+            "#f59e0b", // Amber/Yellow
+            "#ec4899", // Pink
+            "#8b5cf6", // Purple
+            "#10b981", // Emerald
+            "#f43f5e", // Rose
+            "#06b6d4", // Cyan
+            "#84cc16", // Lime
+            "#a855f7"  // Purple-light
+        ];
+
+        function hexToHsl(hex) {
+            let r = parseInt(hex.substring(1, 3), 16) / 255;
+            let g = parseInt(hex.substring(3, 5), 16) / 255;
+            let b = parseInt(hex.substring(5, 7), 16) / 255;
+
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+
+        function getProjectedColorStyles(hex) {
+            const hsl = hexToHsl(hex);
+            // Limit saturation to max 35% and lightness to max 35% for desaturation
+            const baseS = Math.min(hsl.s, 30);
+            const baseL = Math.min(hsl.l, 30);
+            const stripeL = Math.max(baseL - 10, 15);
+
+            const color1 = `hsl(${hsl.h}, ${baseS}%, ${baseL}%)`;
+            const color2 = `hsl(${hsl.h}, ${baseS}%, ${stripeL}%)`;
+
+            return `repeating-linear-gradient(45deg, ${color1}, ${color1} 10px, ${color2} 10px, ${color2} 20px)`;
+        }
+
+        function adjustColorBrightness(hex, percent) {
+            let R = parseInt(hex.substring(1, 3), 16);
+            let G = parseInt(hex.substring(3, 5), 16);
+            let B = parseInt(hex.substring(5, 7), 16);
+
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+
+            R = (R < 255) ? R : 255;
+            G = (G < 255) ? G : 255;
+            B = (B < 255) ? B : 255;
+
+            R = (R > 0) ? R : 0;
+            G = (G > 0) ? G : 0;
+            B = (B > 0) ? B : 0;
+
+            const rHex = R.toString(16).padStart(2, '0');
+            const gHex = G.toString(16).padStart(2, '0');
+            const bHex = B.toString(16).padStart(2, '0');
+
+            return `#${rHex}${gHex}${bHex}`;
+        }
+
+        function getUniqueTeamColor() {
+            const existingColors = teams.map(t => t.color).filter(Boolean);
+            for (let col of TEAM_PALETTE) {
+                if (!existingColors.includes(col)) {
+                    return col;
+                }
+            }
+            let attempts = 0;
+            while (attempts < 100) {
+                const randomHex = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+                if (!existingColors.includes(randomHex)) {
+                    return randomHex;
+                }
+                attempts++;
+            }
+            return "#4ade80";
+        }
+
+        // --- 2. DATA STATE ---
+        let teams = [
+            { id: "t1", name: "Jinhsi + Zhezhi + Verina", characterIds: ["jinhsi", "zhezhi", "verina"], est: 4000, act: null, killed: false, canvasNodes: [], timelineNodes: [], color: "#4ade80" },
+            { id: "t2", name: "Jiyan + Mortefi + Baizhi", characterIds: ["jiyan", "mortefi", "baizhi"], est: 8500, act: null, killed: false, canvasNodes: [], timelineNodes: [], color: "#3b82f6" },
+            { id: "t3", name: "Rover (Havoc) + Danjin + Jianxin", characterIds: ["rover_h", "danjin", "jianxin"], est: 10500, act: null, killed: false, canvasNodes: [], timelineNodes: [], color: "#f59e0b" }
+        ];
+        let teamCounter = 3;
+        let activeTeamId = null;
+
+        // --- 3. INITIALIZATION ---
+        function init() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#share=')) {
+                try {
+                    const serialized = hash.slice(7);
+                    const decoded = JSON.parse(decodeURIComponent(escape(atob(serialized))));
+                    if (Array.isArray(decoded)) {
+                        teams = decoded;
+                        teams.forEach(t => {
+                            if (!t.color) t.color = getUniqueTeamColor();
+                        });
+                        // Adjust teamCounter to prevent ID collisions
+                        let maxIdNum = 0;
+                        teams.forEach(t => {
+                            const match = t.id.match(/^t(\d+)$/);
+                            if (match) {
+                                const num = parseInt(match[1]);
+                                if (num > maxIdNum) maxIdNum = num;
+                            }
+                        });
+                        teamCounter = Math.max(teamCounter, maxIdNum);
+                    }
+                } catch (e) {
+                    console.error("Failed to parse shared URL data:", e);
+                }
+            }
+            renderBosses();
+            renderTeams();
+            calculateMatrix();
+        }
+
+        function sharePlan() {
+            try {
+                const serialized = btoa(unescape(encodeURIComponent(JSON.stringify(teams))));
+                const shareUrl = `${window.location.origin}${window.location.pathname}#share=${serialized}`;
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("Share link copied to clipboard! Send this URL to others to share your teams and planner layout.");
+                }).catch(err => {
+                    prompt("Copy this URL to share your plan:", shareUrl);
+                });
+            } catch (e) {
+                alert("Failed to generate share link: " + e.message);
+            }
+        }
+
+        function renderBosses() {
+            const container = document.getElementById('boss-container');
+            container.innerHTML = '';
+            let currentRound = 0;
+
+            bosses.forEach((boss, index) => {
+                if (boss.round !== currentRound) {
+                    currentRound = boss.round;
+                    const header = document.createElement('h3');
+                    header.className = 'round-header';
+                    header.innerText = `Round ${currentRound} (Max HP: ${boss.hp})`;
+                    container.appendChild(header);
+                }
+
+                const tagsHtml = boss.resistances.map(r => `
+                    <span class="badge badge-${r.toLowerCase()}">${r}</span>
+                `).join('');
+
+                const html = `
+                    <div class="boss-row">
+                        <div class="boss-info">
+                            <div class="boss-name">${boss.name}</div>
+                            <div class="boss-tags">${tagsHtml}</div>
+                        </div>
+                        <div class="boss-bar-container" id="boss-bar-${index}">
+                            <div class="boss-text" id="text-${index}">0 / ${boss.hp}</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- 4. TEAM STATE MANAGEMENT & RENDERING ---
+        function renderTeams() {
+            const container = document.getElementById('teams-container');
+            container.innerHTML = '';
+
+            teams.forEach((team, index) => {
+                // Calculate team cost
+                const totalCost = team.characterIds
+                    .map(cid => CHARACTERS.find(c => c.id === cid))
+                    .filter(Boolean)
+                    .reduce((sum, c) => sum + c.cost, 0);
+
+                const card = document.createElement('div');
+                card.className = 'team-card';
+                card.style.borderLeftColor = team.color;
+                card.setAttribute('draggable', 'true');
+                card.setAttribute('data-id', team.id);
+                card.setAttribute('ondragstart', `dragStart(event, '${team.id}')`);
+                card.setAttribute('ondragover', 'dragOver(event)');
+                card.setAttribute('ondragleave', 'dragLeave(event)');
+                card.setAttribute('ondragend', 'dragEnd(event)');
+                card.setAttribute('ondrop', `drop(event, '${team.id}')`);
+
+                // Build custom searchable dropdowns
+                let selectsHtml = '';
+                for (let i = 0; i < 3; i++) {
+                    const currentId = team.characterIds[i];
+                    const currentChar = CHARACTERS.find(c => c.id === currentId);
+                    const displayText = currentChar ? currentChar.name : '';
+                    const displayIconHtml = currentChar ? `<img src="${currentChar.icon}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border-radius: 50%;">` : '';
+                    const displayBadgeHtml = currentChar ? `<span class="badge badge-${currentChar.attribute.toLowerCase()}" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 0.65em; padding: 2px 4px;">${currentChar.attribute}</span>` : '';
+
+                    let optionsHtml = `<div class="dropdown-item ${!currentId ? 'selected' : ''}" onmousedown="selectDropdownChar('${team.id}', ${i}, '')">-- None --</div>`;
+                    CHARACTERS.forEach(char => {
+                        let usageCount = 0;
+                        teams.forEach(t => {
+                            t.characterIds.forEach((cid, idx) => {
+                                if (t.id !== team.id || idx !== i) {
+                                    if (cid === char.id) {
+                                        usageCount++;
+                                    }
+                                }
+                            });
+                        });
+                        const isSelectedElsewhere = usageCount >= (char.cost || 1);
+                        const isCurrent = currentId === char.id;
+                        optionsHtml += `
+                            <div class="dropdown-item ${isCurrent ? 'selected' : ''} ${isSelectedElsewhere ? 'disabled' : ''}" 
+                                 onmousedown="selectDropdownChar('${team.id}', ${i}, '${char.id}')"
+                                 data-name="${char.name.toLowerCase()}"
+                                 data-attr="${char.attribute.toLowerCase()}">
+                                 <span style="display: flex; align-items: center; gap: 8px; width: 100%; justify-content: space-between;">
+                                     <span style="display: flex; align-items: center; gap: 8px;">
+                                         <img src="${char.icon}" style="width: 18px; height: 18px; border-radius: 50%;">
+                                         <span>${char.name}</span>
+                                     </span>
+                                     <span class="badge badge-${char.attribute.toLowerCase()}">${char.attribute}</span>
+                                 </span>
+                             </div>
+                        `;
+                    });
+
+                    selectsHtml += `
+                        <div class="dropdown-container" style="position: relative;">
+                            ${displayIconHtml}
+                            <input type="text" class="dropdown-input" id="input-${team.id}-${i}" 
+                                   value="${displayText}" 
+                                   placeholder="-- Select Character ${i + 1} --" 
+                                   onfocus="focusDropdown('${team.id}', ${i})" 
+                                   onblur="blurDropdown('${team.id}', ${i})" 
+                                   oninput="filterDropdown('${team.id}', ${i}, this.value)">
+                            ${displayBadgeHtml}
+                            <div class="dropdown-menu" id="menu-${team.id}-${i}">
+                                ${optionsHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 6px; max-width: 70%;">
+                            <span style="color: #666; font-size: 1.1em; cursor: grab; user-select: none;">⋮⋮</span>
+                            <input type="color" value="${team.color}" onchange="updateTeamColor('${team.id}', this.value)" title="Choose Team Color">
+                            <h3 style="margin: 0; font-size: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Team ${index + 1}</h3>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTeam('${team.id}')">Delete</button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        ${selectsHtml}
+                    </div>
+                    <div class="input-group" style="margin-top: 5px;">
+                        <label>Est. Score:</label>
+                        <input type="number" value="${team.est}" oninput="updateTeamEst('${team.id}', this.value)">
+                    </div>
+                    <div class="input-group">
+                        <label>Actual Score:</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" value="${team.act !== null ? team.act : ''}" placeholder="Completed?" oninput="updateTeamAct('${team.id}', this.value)">
+                            <label style="display: flex; align-items: center; font-size: 0.8em; gap: 3px; cursor: pointer; user-select: none; white-space: nowrap; color: var(--accent);">
+                                <input type="checkbox" ${team.killed ? 'checked' : ''} onchange="updateTeamKilled('${team.id}', this.checked)" style="margin: 0; width: auto; height: auto; cursor: pointer;">
+                                Killed
+                            </label>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 5px;">
+                        <textarea placeholder="Type notes..." oninput="updateTeamNotes('${team.id}', this.value)" style="width: 100%; background: #111; color: #ccc; border: 1px solid #444; border-radius: 4px; padding: 6px; font-size: 0.85em; resize: none; height: 50px; box-sizing: border-box; font-family: inherit; word-break: break-word; white-space: pre-wrap;">${escapeHTML(team.notes || '')}</textarea>
+                    </div>
+                    <button onclick="openPlanner('${team.id}')">Rotation</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- Custom Searchable Dropdown Helpers ---
+        function focusDropdown(teamId, index) {
+            const menu = document.getElementById(`menu-${teamId}-${index}`);
+            if (menu) menu.classList.add('show');
+            const input = document.getElementById(`input-${teamId}-${index}`);
+            if (input) input.value = '';
+            filterDropdown(teamId, index, '');
+        }
+
+        function blurDropdown(teamId, index) {
+            setTimeout(() => {
+                const menu = document.getElementById(`menu-${teamId}-${index}`);
+                if (menu) menu.classList.remove('show');
+
+                const input = document.getElementById(`input-${teamId}-${index}`);
+                const team = teams.find(t => t.id === teamId);
+                if (input && team) {
+                    const currentId = team.characterIds[index];
+                    const currentChar = CHARACTERS.find(c => c.id === currentId);
+                    input.value = currentChar ? currentChar.name : '';
+                }
+            }, 200);
+        }
+
+        function filterDropdown(teamId, index, query) {
+            const menu = document.getElementById(`menu-${teamId}-${index}`);
+            if (!menu) return;
+            const items = menu.getElementsByClassName('dropdown-item');
+            const q = query.toLowerCase();
+            for (let item of items) {
+                const name = item.getAttribute('data-name') || '';
+                const attr = item.getAttribute('data-attr') || '';
+                if (name.includes(q) || attr.includes(q) || q === '') {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        }
+
+        function selectDropdownChar(teamId, index, charId) {
+            updateTeamChar(teamId, index, charId);
+        }
+
+        // --- Drag and Drop Sorting for Teams ---
+        let dragSourceId = null;
+
+        function dragStart(e, id) {
+            dragSourceId = id;
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', id);
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const card = e.currentTarget;
+            const rect = card.getBoundingClientRect();
+            const relativeY = e.clientY - rect.top;
+            const midPoint = rect.height / 2;
+
+            if (relativeY < midPoint) {
+                card.classList.add('drag-over-top');
+                card.classList.remove('drag-over-bottom');
+            } else {
+                card.classList.add('drag-over-bottom');
+                card.classList.remove('drag-over-top');
+            }
+        }
+
+        function dragLeave(e) {
+            e.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+        }
+
+        function dragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.team-card').forEach(c => {
+                c.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+            });
+        }
+
+        function drop(e, targetId) {
+            e.preventDefault();
+            const card = e.currentTarget;
+            const isTop = card.classList.contains('drag-over-top');
+
+            card.classList.remove('drag-over-top', 'drag-over-bottom');
+
+            if (dragSourceId && dragSourceId !== targetId) {
+                const sourceIdx = teams.findIndex(t => t.id === dragSourceId);
+                if (sourceIdx !== -1) {
+                    const [draggedTeam] = teams.splice(sourceIdx, 1);
+                    const targetIdx = teams.findIndex(t => t.id === targetId);
+                    if (isTop) {
+                        teams.splice(targetIdx, 0, draggedTeam);
+                    } else {
+                        teams.splice(targetIdx + 1, 0, draggedTeam);
+                    }
+                    renderTeams();
+                    calculateMatrix();
+                }
+            }
+        }
+
+        function addNewTeam() {
+            teamCounter++;
+            teams.push({
+                id: `t${teamCounter}`,
+                name: `Team ${teamCounter}`,
+                characterIds: ["", "", ""],
+                est: 0,
+                act: null,
+                killed: false,
+                canvasNodes: [],
+                timelineNodes: [],
+                color: getUniqueTeamColor()
+            });
+            renderTeams();
+            calculateMatrix();
+        }
+
+        function deleteTeam(id) {
+            teams = teams.filter(t => t.id !== id);
+            if (activeTeamId === id) {
+                closePlanner();
+            }
+            renderTeams();
+            calculateMatrix();
+        }
+
+        function updateTeamChar(teamId, index, charId) {
+            const team = teams.find(t => t.id === teamId);
+            if (team) {
+                team.characterIds[index] = charId;
+
+                // Auto generate team name based on characters
+                const names = team.characterIds
+                    .map(cid => CHARACTERS.find(c => c.id === cid))
+                    .filter(Boolean)
+                    .map(c => c.name);
+
+                team.name = names.length > 0 ? names.join(" + ") : `Team ${team.id}`;
+                renderTeams();
+            }
+        }
+
+        function updateTeamEst(id, val) {
+            const team = teams.find(t => t.id === id);
+            if (team) {
+                team.est = parseInt(val) || 0;
+                calculateMatrix();
+            }
+        }
+
+        function updateTeamAct(id, val) {
+            const team = teams.find(t => t.id === id);
+            if (team) {
+                team.act = val === "" ? null : (parseInt(val) || 0);
+                calculateMatrix();
+            }
+        }
+
+        function updateTeamKilled(id, checked) {
+            const team = teams.find(t => t.id === id);
+            if (team) {
+                team.killed = checked;
+                calculateMatrix();
+            }
+        }
+
+        function updateTeamNotes(id, val) {
+            const team = teams.find(t => t.id === id);
+            if (team) {
+                team.notes = val;
+            }
+        }
+
+        function updateTeamColor(id, val) {
+            const team = teams.find(t => t.id === id);
+            if (team) {
+                team.color = val;
+                renderTeams();
+                calculateMatrix();
+            }
+        }
+
+        function snapToNearestBoss(val) {
+            if (val <= 0) return 0;
+            const boundaries = [0];
+            let cumulative = 0;
+            bosses.forEach(boss => {
+                cumulative += boss.hp;
+                boundaries.push(cumulative);
+            });
+            let closest = boundaries[0];
+            let minDiff = Math.abs(val - closest);
+            for (let i = 1; i < boundaries.length; i++) {
+                const diff = Math.abs(val - boundaries[i]);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = boundaries[i];
+                }
+            }
+            return closest;
+        }
+
+        // --- 5. THE WATERFALL ALGORITHM ---
+        function calculateMatrix() {
+            let actualPool = 0;
+            let estPool = 0;
+
+            teams.forEach(t => {
+                if (t.act !== null) {
+                    actualPool += t.act;
+                } else {
+                    estPool += t.est;
+                }
+            });
+
+            document.getElementById('tot-act').innerText = actualPool;
+            document.getElementById('tot-est').innerText = (actualPool + estPool);
+
+            // Parallel trackers: one for raw (labels & values), one for visual (snapping segments)
+            let allocatedTotalRaw = bosses.map(() => 0);
+            let bossActualDamage = bosses.map(() => 0);
+            let bossTotalDamage = bosses.map(() => 0);
+
+            let allocatedTotalVisual = bosses.map(() => 0);
+            let cumulativeActualVisual = 0;
+
+            // We'll collect HTML segments for each boss
+            let bossSegments = bosses.map(() => []);
+
+            teams.forEach(t => {
+                let isActual = (t.act !== null);
+
+                // 1. Calculate raw allocation
+                let rawScore = isActual ? t.act : t.est;
+                let remainingRaw = rawScore;
+                for (let bIdx = 0; bIdx < bosses.length; bIdx++) {
+                    if (remainingRaw <= 0) break;
+                    let boss = bosses[bIdx];
+                    let capacity = boss.hp - allocatedTotalRaw[bIdx];
+                    if (capacity > 0) {
+                        let chunkRaw = Math.min(remainingRaw, capacity);
+                        allocatedTotalRaw[bIdx] += chunkRaw;
+                        if (isActual) {
+                            bossActualDamage[bIdx] += chunkRaw;
+                        }
+                        bossTotalDamage[bIdx] += chunkRaw;
+                        remainingRaw -= chunkRaw;
+                    }
+                }
+
+                // 2. Calculate and render visual allocation
+                let visualScore = 0;
+                if (isActual) {
+                    if (t.killed) {
+                        let targetCumulative = cumulativeActualVisual + t.act;
+                        let snappedCumulative = snapToNearestBoss(targetCumulative);
+                        visualScore = Math.max(0, snappedCumulative - cumulativeActualVisual);
+                    } else {
+                        visualScore = t.act;
+                    }
+                    cumulativeActualVisual += visualScore;
+                } else {
+                    visualScore = t.est;
+                }
+                let remainingVisual = visualScore;
+
+                for (let bIdx = 0; bIdx < bosses.length; bIdx++) {
+                    if (remainingVisual <= 0) break;
+                    let boss = bosses[bIdx];
+                    let capacity = boss.hp - allocatedTotalVisual[bIdx];
+                    if (capacity > 0) {
+                        let chunkVisual = Math.min(remainingVisual, capacity);
+                        let leftPct = (allocatedTotalVisual[bIdx] / boss.hp) * 100;
+                        let widthPct = (chunkVisual / boss.hp) * 100;
+
+                        let bgStyle = "";
+                        if (isActual) {
+                            bgStyle = t.color;
+                        } else {
+                            bgStyle = getProjectedColorStyles(t.color);
+                        }
+
+                        bossSegments[bIdx].push(`
+                            <div class="boss-bar-segment" style="
+                                position: absolute;
+                                left: ${leftPct}%;
+                                width: ${widthPct}%;
+                                height: 100%;
+                                background: ${bgStyle};
+                                transition: width 0.3s ease, left 0.3s ease;
+                                top: 0;
+                            "></div>
+                        `);
+
+                        allocatedTotalVisual[bIdx] += chunkVisual;
+                        remainingVisual -= chunkVisual;
+                    }
+                }
+            });
+
+            bosses.forEach((boss, index) => {
+                const barContainer = document.getElementById(`boss-bar-${index}`);
+                if (!barContainer) return;
+
+                const actualDamage = bossActualDamage[index];
+                const totalDamage = bossTotalDamage[index];
+                const actPct = (actualDamage / boss.hp) * 100;
+
+                // Re-render container segments and text
+                let segmentsHtml = bossSegments[index].join('');
+                let textText = `${boss.hp}`;
+                let textColor = "#e0e0e0";
+
+                barContainer.innerHTML = segmentsHtml + `<div class="boss-text" id="text-${index}" style="color: ${textColor};">${textText}</div>`;
+            });
+        }
+
+        // --- 6. VIEW TOGGLING ---
+        function openPlanner(teamId) {
+            activeTeamId = teamId;
+            const team = teams.find(t => t.id === teamId);
+            if (!team) return;
+            const teamIndex = teams.findIndex(t => t.id === teamId);
+
+            // Initialize timelines if not present (backward compatibility)
+            if (!team.timelines || team.timelines.length === 0) {
+                team.timelines = [
+                    { id: "tl-default", name: "Default Timeline", nodes: team.timelineNodes || [] }
+                ];
+                team.activeTimelineId = "tl-default";
+            }
+
+            document.getElementById('sidebar').classList.add('hidden');
+            document.getElementById('matrix-dashboard').classList.add('hidden');
+            document.getElementById('rotation-planner').classList.remove('hidden');
+            document.getElementById('planner-title').innerText = `Team ${teamIndex + 1} Rotation`;
+
+            // Build dynamic character action movesets
+            const movesetsContainer = document.getElementById('movesets-container');
+            movesetsContainer.innerHTML = '';
+
+            team.characterIds.forEach(cid => {
+                const char = CHARACTERS.find(c => c.id === cid);
+                if (!char) return;
+
+                const row = document.createElement('div');
+                row.className = 'char-moveset-row';
+
+                const title = document.createElement('div');
+                title.className = 'char-moveset-title';
+                title.innerHTML = `<img src="${char.icon}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;"> <span>${char.name}</span>`;
+                row.appendChild(title);
+
+                const actions = ["BA", "Hold", "HA", "Jump", "Plunge", "Skill", "Liberation", "Dash", "Echo"];
+                actions.forEach(act => {
+                    const btn = document.createElement('button');
+                    btn.innerText = act;
+                    btn.style.width = 'auto';
+                    btn.style.marginTop = '0';
+                    btn.style.background = '#444';
+                    btn.style.color = '#fff';
+                    btn.style.padding = '4px 10px';
+                    btn.style.fontSize = '0.85em';
+                    btn.onclick = () => spawnNode(act, char.id);
+                    row.appendChild(btn);
+                });
+
+                movesetsContainer.appendChild(row);
+            });
+
+            // Append general action block row
+            const generalRow = document.createElement('div');
+            generalRow.className = 'char-moveset-row';
+            generalRow.style.borderLeftColor = '#888';
+
+            const generalTitle = document.createElement('div');
+            generalTitle.className = 'char-moveset-title';
+            generalTitle.innerHTML = `<span>⚙️</span> <span>General</span>`;
+            generalRow.appendChild(generalTitle);
+
+            const generalActions = ["Swap", "Intro", "Note"];
+            generalActions.forEach(act => {
+                const btn = document.createElement('button');
+                btn.innerText = act;
+                btn.style.width = 'auto';
+                btn.style.marginTop = '0';
+                btn.style.background = '#555';
+                btn.style.color = '#fff';
+                btn.style.padding = '4px 10px';
+                btn.style.fontSize = '0.85em';
+                btn.onclick = () => spawnNode(act, "");
+                generalRow.appendChild(btn);
+            });
+            movesetsContainer.appendChild(generalRow);
+
+            renderPlannerWorkspace(team);
+        }
+
+        function closePlanner() {
+            activeTeamId = null;
+            document.getElementById('sidebar').classList.remove('hidden');
+            document.getElementById('rotation-planner').classList.add('hidden');
+            document.getElementById('matrix-dashboard').classList.remove('hidden');
+        }
+
+        // --- 7. CANVAS & TIMELINE LOGIC ---
+        function renderPlannerWorkspace(team) {
+            const canvas = document.getElementById('canvas-area');
+            const timelinesContainer = document.getElementById('timelines-container');
+            canvas.innerHTML = '';
+            timelinesContainer.innerHTML = '';
+
+            // Ensure timelines are initialized
+            if (!team.timelines || team.timelines.length === 0) {
+                team.timelines = [
+                    { id: "tl-default", name: "Default Timeline", nodes: team.timelineNodes || [] }
+                ];
+                team.activeTimelineId = "tl-default";
+            }
+
+            const activeTimeline = team.timelines.find(tl => tl.id === team.activeTimelineId) || team.timelines[0];
+
+            // Render all timelines simultaneously (row-by-row)
+            team.timelines.forEach(tl => {
+                const isActive = tl.id === team.activeTimelineId;
+
+                const rowEl = document.createElement('div');
+                rowEl.style.display = 'flex';
+                rowEl.style.alignItems = 'stretch';
+                rowEl.style.gap = '15px';
+                rowEl.style.marginBottom = '15px';
+
+                // Left side: Timeline Meta Box (clickable to set active/edit)
+                const metaEl = document.createElement('div');
+                metaEl.style.width = '220px';
+                metaEl.style.minWidth = '220px';
+                metaEl.style.display = 'flex';
+                metaEl.style.alignItems = 'center';
+                metaEl.style.justifyContent = 'space-between';
+                metaEl.style.padding = '10px 14px';
+                metaEl.style.borderRadius = '8px';
+                metaEl.style.cursor = 'pointer';
+                metaEl.style.userSelect = 'none';
+                metaEl.style.boxSizing = 'border-box';
+
+                if (isActive) {
+                    metaEl.style.borderLeft = '5px solid var(--accent)';
+                    metaEl.style.background = '#2a2a2a';
+                    metaEl.style.color = '#fff';
+                    metaEl.style.border = '1px solid var(--accent)';
+                    metaEl.style.borderLeftWidth = '5px';
+                } else {
+                    metaEl.style.borderLeft = '5px solid #555';
+                    metaEl.style.background = '#1a1a1a';
+                    metaEl.style.color = '#aaa';
+                    metaEl.style.border = '1px solid #333';
+                    metaEl.style.borderLeftWidth = '5px';
+                }
+
+                // Double click to rename
+                const nameSpan = document.createElement('span');
+                nameSpan.innerText = tl.name;
+                nameSpan.style.fontWeight = 'bold';
+                nameSpan.style.overflow = 'hidden';
+                nameSpan.style.textOverflow = 'ellipsis';
+                nameSpan.style.whiteSpace = 'nowrap';
+                nameSpan.style.maxWidth = '150px';
+                nameSpan.title = "Double click to rename, click to select for spawning nodes";
+                nameSpan.onclick = (e) => {
+                    e.stopPropagation();
+                    if (team.activeTimelineId !== tl.id) {
+                        team.activeTimelineId = tl.id;
+                        renderPlannerWorkspace(team);
+                    }
+                };
+                nameSpan.ondblclick = (e) => {
+                    e.stopPropagation();
+                    const newName = prompt("Rename timeline to:", tl.name);
+                    if (newName && newName.trim() !== "") {
+                        tl.name = newName.trim();
+                        renderPlannerWorkspace(team);
+                    }
+                };
+                metaEl.appendChild(nameSpan);
+
+                // Delete button (visible on non-active or when multiple exist)
+                if (team.timelines.length > 1) {
+                    const delBtn = document.createElement('span');
+                    delBtn.innerHTML = '&times;';
+                    delBtn.style.fontSize = '1.3em';
+                    delBtn.style.cursor = 'pointer';
+                    delBtn.style.padding = '0 6px';
+                    delBtn.style.color = '#ef4444';
+                    delBtn.title = "Delete Timeline";
+                    delBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm(`Are you sure you want to delete timeline "${tl.name}"?`)) {
+                            const idx = team.timelines.indexOf(tl);
+                            team.timelines.splice(idx, 1);
+                            if (team.activeTimelineId === tl.id) {
+                                team.activeTimelineId = team.timelines[0].id;
+                            }
+                            renderPlannerWorkspace(team);
+                        }
+                    };
+                    metaEl.appendChild(delBtn);
+                }
+
+                metaEl.onclick = () => {
+                    if (team.activeTimelineId !== tl.id) {
+                        team.activeTimelineId = tl.id;
+                        renderPlannerWorkspace(team);
+                    }
+                };
+                rowEl.appendChild(metaEl);
+
+                // Right side: Timeline Nodes Track
+                const trackEl = document.createElement('div');
+                trackEl.className = 'timeline-track-row';
+                trackEl.style.flexGrow = '1';
+                trackEl.style.minHeight = '80px';
+                trackEl.style.background = '#111';
+                trackEl.style.borderRadius = '8px';
+                trackEl.style.display = 'flex';
+                trackEl.style.flexWrap = 'wrap';
+                trackEl.style.alignContent = 'flex-end';
+                trackEl.style.alignItems = 'flex-end';
+                trackEl.style.padding = '12px';
+                trackEl.style.gap = '12px';
+                trackEl.style.border = isActive ? '1px solid var(--accent)' : '1px solid #333';
+                trackEl.style.boxSizing = 'border-box';
+
+                // Build grouped columns for timeline rendering
+                const timelineGroups = [];
+                tl.nodes.forEach((nodeData, idx) => {
+                    if (nodeData.text === "Note") {
+                        if (timelineGroups.length > 0) {
+                            timelineGroups[timelineGroups.length - 1].noteNode = nodeData;
+                            timelineGroups[timelineGroups.length - 1].noteIdx = idx;
+                        } else {
+                            timelineGroups.push({ actionNode: null, actionIdx: -1, noteNode: nodeData, noteIdx: idx });
+                        }
+                    } else {
+                        timelineGroups.push({ actionNode: nodeData, actionIdx: idx, noteNode: null, noteIdx: -1 });
+                    }
+                });
+
+                // Render grouped columns in this specific timeline
+                timelineGroups.forEach(group => {
+                    const colEl = document.createElement('div');
+                    colEl.style.display = 'inline-flex';
+                    colEl.style.flexDirection = 'column';
+                    colEl.style.alignItems = 'center';
+                    colEl.style.gap = '20px';
+                    colEl.style.boxSizing = 'border-box';
+
+                    if (group.noteNode) {
+                        const noteEl = document.createElement('div');
+                        noteEl.className = 'node-note-bubble';
+                        noteEl.innerText = group.noteNode.noteText || 'Note';
+
+                        noteEl.addEventListener('dblclick', function (e) {
+                            e.stopPropagation();
+                            tl.nodes.splice(group.noteIdx, 1);
+                            team.canvasNodes.push({
+                                text: "Note",
+                                charId: "",
+                                count: 1,
+                                left: '10px',
+                                top: '20px',
+                                noteText: group.noteNode.noteText || ''
+                            });
+                            renderPlannerWorkspace(team);
+                        });
+                        colEl.appendChild(noteEl);
+                    }
+
+                    if (group.actionNode) {
+                        const node = document.createElement('div');
+                        node.className = 'node';
+                        node.style.marginTop = '0'; // align clean in row
+
+                        const char = CHARACTERS.find(c => c.id === group.actionNode.charId);
+                        const iconHtml = char ? `<div class="node-icon"><img src="${char.icon}" style="width:100%; height:100%; object-fit:cover;"></div>` : '';
+                        const countSuffix = (group.actionNode.count && group.actionNode.count > 1) ? ` x${group.actionNode.count}` : '';
+
+                        node.innerHTML = `${iconHtml}<span>${group.actionNode.text}${countSuffix}</span>`;
+
+                        node.addEventListener('dblclick', function (e) {
+                            e.stopPropagation();
+                            tl.nodes.splice(group.actionIdx, 1);
+                            team.canvasNodes.push({
+                                text: group.actionNode.text,
+                                charId: group.actionNode.charId,
+                                count: group.actionNode.count || 1,
+                                left: '10px',
+                                top: '20px',
+                                noteText: group.actionNode.noteText || ''
+                            });
+                            renderPlannerWorkspace(team);
+                        });
+
+                        colEl.appendChild(node);
+                    }
+
+                    trackEl.appendChild(colEl);
+                });
+
+                rowEl.appendChild(trackEl);
+                timelinesContainer.appendChild(rowEl);
+            });
+
+            // Create delete zone at the bottom right corner
+            const deleteZone = document.createElement('div');
+            deleteZone.id = 'delete-zone';
+            deleteZone.innerText = 'Drag here to Delete';
+            canvas.appendChild(deleteZone);
+
+            // Render canvas nodes
+            team.canvasNodes.forEach((nodeData, idx) => {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.style.position = 'absolute';
+                node.style.left = nodeData.left;
+                node.style.top = nodeData.top;
+
+                const char = CHARACTERS.find(c => c.id === nodeData.charId);
+                const iconHtml = char ? `<div class="node-icon"><img src="${char.icon}" style="width:100%; height:100%; object-fit:cover;"></div>` : '';
+                const countSuffix = (nodeData.count && nodeData.count > 1) ? ` x${nodeData.count}` : '';
+
+                const isNote = nodeData.text === "Note";
+                if (isNote) {
+                    node.innerHTML = `<span>${nodeData.noteText || 'Click to edit note...'}</span>`;
+                } else {
+                    node.innerHTML = `${iconHtml}<span>${nodeData.text}${countSuffix}</span>`;
+                }
+
+                node.addEventListener('dblclick', function () {
+                    if (isNote) return; // Note double click is bypassed (automatic on edit OK)
+                    // Move to timeline
+                    team.canvasNodes.splice(idx, 1);
+                    activeTimeline.nodes.push({
+                        text: nodeData.text,
+                        charId: nodeData.charId,
+                        count: nodeData.count || 1,
+                        noteText: nodeData.noteText || ''
+                    });
+                    renderPlannerWorkspace(team);
+                });
+
+                // Mouse dragging logic inside the canvas area
+                node.addEventListener('mousedown', function (e) {
+                    if (e.button !== 0) return; // Left click only
+
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const initialLeft = parseInt(node.style.left) || 0;
+                    const initialTop = parseInt(node.style.top) || 0;
+                    let didDrag = false;
+
+                    function onMouseMove(moveEvent) {
+                        const deltaX = moveEvent.clientX - startX;
+                        const deltaY = moveEvent.clientY - startY;
+
+                        if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+                            didDrag = true;
+                        }
+
+                        let newLeft = initialLeft + deltaX;
+                        let newTop = initialTop + deltaY;
+
+                        const maxLeft = canvas.clientWidth - node.offsetWidth;
+                        const maxTop = canvas.clientHeight - node.offsetHeight;
+
+                        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                        newTop = Math.max(0, Math.min(newTop, maxTop));
+
+                        node.style.left = `${newLeft}px`;
+                        node.style.top = `${newTop}px`;
+
+                        // Persist coordinate updates in state
+                        nodeData.left = `${newLeft}px`;
+                        nodeData.top = `${newTop}px`;
+
+                        // Check overlap with delete zone to toggle hover effect
+                        const deleteZoneEl = document.getElementById('delete-zone');
+                        if (deleteZoneEl) {
+                            const dzRect = deleteZoneEl.getBoundingClientRect();
+                            const nodeRect = node.getBoundingClientRect();
+                            const isOverlapping = !(
+                                nodeRect.right < dzRect.left ||
+                                nodeRect.left > dzRect.right ||
+                                nodeRect.bottom < dzRect.top ||
+                                nodeRect.top > dzRect.bottom
+                            );
+                            if (isOverlapping) {
+                                deleteZoneEl.classList.add('drag-hover');
+                            } else {
+                                deleteZoneEl.classList.remove('drag-hover');
+                            }
+                        }
+                    }
+
+                    function onMouseUp() {
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+
+                        if (!didDrag) {
+                            // Single click once to edit note in free-form canvas
+                            if (isNote) {
+                                const newText = prompt("Edit note:", nodeData.noteText || "");
+                                if (newText !== null && newText.trim() !== "") {
+                                    nodeData.noteText = newText.trim();
+                                    // Move to active timeline automatically!
+                                    team.canvasNodes.splice(idx, 1);
+                                    activeTimeline.nodes.push({
+                                        text: "Note",
+                                        charId: "",
+                                        count: 1,
+                                        noteText: nodeData.noteText
+                                    });
+                                }
+                                renderPlannerWorkspace(team);
+                            }
+                            return;
+                        }
+
+                        // Check if dropped on delete zone
+                        const deleteZoneEl = document.getElementById('delete-zone');
+                        let isDeleted = false;
+                        if (deleteZoneEl) {
+                            const dzRect = deleteZoneEl.getBoundingClientRect();
+                            const nodeRect = node.getBoundingClientRect();
+                            const isOverlapping = !(
+                                nodeRect.right < dzRect.left ||
+                                nodeRect.left > dzRect.right ||
+                                nodeRect.bottom < dzRect.top ||
+                                nodeRect.top > dzRect.bottom
+                            );
+                            if (isOverlapping) {
+                                deleteZoneEl.classList.remove('drag-hover');
+                                team.canvasNodes.splice(idx, 1);
+                                isDeleted = true;
+                            }
+                        }
+
+                        if (isDeleted) {
+                            renderPlannerWorkspace(team);
+                            return;
+                        }
+
+                        // Collapse logic: check if dropped on another node of exact same type
+                        const currentLeft = parseInt(node.style.left) || 0;
+                        const currentTop = parseInt(node.style.top) || 0;
+                        let collapsed = false;
+
+                        for (let otherIdx = 0; otherIdx < team.canvasNodes.length; otherIdx++) {
+                            if (otherIdx === idx) continue;
+                            const otherNode = team.canvasNodes[otherIdx];
+                            if (otherNode.charId === nodeData.charId && otherNode.text === nodeData.text) {
+                                const otherLeft = parseInt(otherNode.left) || 0;
+                                const otherTop = parseInt(otherNode.top) || 0;
+                                const distance = Math.sqrt(Math.pow(currentLeft - otherLeft, 2) + Math.pow(currentTop - otherTop, 2));
+                                if (distance < 30) {
+                                    // Merge this node into the other
+                                    otherNode.count = (otherNode.count || 1) + (nodeData.count || 1);
+                                    team.canvasNodes.splice(idx, 1);
+                                    collapsed = true;
+                                    break;
+                                }
+                            }
+                        }
+                        renderPlannerWorkspace(team);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+
+                canvas.appendChild(node);
+            });
+        }
+
+        function addTimeline() {
+            if (!activeTeamId) return;
+            const team = teams.find(t => t.id === activeTeamId);
+            if (!team) return;
+
+            const name = prompt("Enter new timeline name:", `Timeline ${team.timelines.length + 1}`);
+            if (name === null) return;
+            const finalName = name.trim() !== "" ? name.trim() : `Timeline ${team.timelines.length + 1}`;
+            const newId = `tl-${Date.now()}`;
+            team.timelines.push({
+                id: newId,
+                name: finalName,
+                nodes: []
+            });
+            team.activeTimelineId = newId;
+            renderPlannerWorkspace(team);
+        }
+
+        function spawnNode(actionName, charId) {
+            if (!activeTeamId) return;
+            const team = teams.find(t => t.id === activeTeamId);
+            if (!team) return;
+
+            const isNote = actionName === "Note";
+            team.canvasNodes.push({
+                text: actionName,
+                charId: charId,
+                count: 1,
+                left: '10px',
+                top: '20px',
+                noteText: isNote ? 'Click to edit note...' : ''
+            });
+            renderPlannerWorkspace(team);
+        }
+
+        // Run setup on load
+        window.onload = init;
+    </script>
+</body>
+
+</html>

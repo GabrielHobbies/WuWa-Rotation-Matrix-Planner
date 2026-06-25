@@ -1,0 +1,25 @@
+CUSTOM NON-COMMERCIAL, SHARE-ALIKE LICENSE
+
+Copyright (c) 2026 GabrielHobbies
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+ATTRIBUTION
+Any individual or entity utilizing, distributing, or showcasing this source code (or any derivative work built upon it) must provide explicit, prominent attribution to the original creator. You must leave the creator watermark and credits visible on the page/application.
+
+NON-COMMERCIAL USE
+Commercial use of this source code is strictly prohibited. You may not use this code, or derivatives of it, for commercial purposes. No individual or entity may sell, rent, lease, or directly monetize this software, put it behind paid firewalls, or include it in ad-supported premium content without explicit permission from the original author.
+
+SHARE-ALIKE (VIRAL OPEN-SOURCE)
+If you modify, transform, or build upon this code, you must release your derivative version under these exact same license terms. Your derivative code must remain transparent and free for others to use under these identical conditions.
+
+UPSTREAM INTEGRATION (CONTRIBUTOR CLAUSE)
+By publicly modifying, customizing, or adding new features to this codebase, you grant the original author a perpetual, royalty-free, worldwide right to adopt, integrate, and use those modifications to upgrade the official master version of the project.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
